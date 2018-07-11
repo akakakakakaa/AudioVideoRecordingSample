@@ -48,8 +48,8 @@ public class MediaVideoEncoder extends MediaEncoder {
     private RenderHandler mRenderHandler;
     private Surface mSurface;
 
-	public MediaVideoEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener, final int width, final int height) {
-		super(muxer, listener);
+	public MediaVideoEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener, boolean packetAvailable, final int width, final int height) {
+		super(muxer, listener, packetAvailable);
 		if (DEBUG) Log.i(TAG, "MediaVideoEncoder: ");
 		mWidth = width;
 		mHeight = height;

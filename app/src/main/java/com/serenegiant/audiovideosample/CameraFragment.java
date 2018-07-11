@@ -23,6 +23,7 @@ package com.serenegiant.audiovideosample;
 */
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import android.app.Fragment;
 import android.os.Bundle;
@@ -59,6 +60,10 @@ public class CameraFragment extends Fragment {
 	 * muxer for audio/video recording
 	 */
 	private MediaMuxerWrapper mMuxer;
+	/**
+	 * socket for audio/video streaming
+	 */
+	private SocketManager mSockManager;
 
 	public CameraFragment() {
 		// need default constructor
@@ -124,6 +129,15 @@ public class CameraFragment extends Fragment {
 	}
 
 	/**
+	 * connectToServer
+	 * for streaming, first request connect to server
+	 */
+	private void connectToServer() {
+		mSockManager = new SocketManager();
+		mSockManager.run();
+	}
+
+	/**
 	 * start resorcing
 	 * This is a sample project and call this on UI thread to avoid being complicated
 	 * but basically this should be called on private thread because prepareing
@@ -133,14 +147,20 @@ public class CameraFragment extends Fragment {
 		if (DEBUG) Log.v(TAG, "startRecording:");
 		try {
 			mRecordButton.setColorFilter(0xffff0000);	// turn red
-			mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
-			if (true) {
-				// for video capturing
-				new MediaVideoEncoder(mMuxer, mMediaEncoderListener, mCameraView.getVideoWidth(), mCameraView.getVideoHeight());
-			}
+			/**
+			* cannot extract audio info from muxer.
+			* muxer does not support outputstream.
+			* so just use audioencoder
+			*/
+			mMuxer = new MediaMuxerWrapper(".m4a");	// if you record audio only, ".m4a" is also OK.
+			//mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
+			//if (true) {
+			//	// for video capturing
+			//	new MediaVideoEncoder(mMuxer, mMediaEncoderListener, mCameraView.getVideoWidth(), mCameraView.getVideoHeight());
+			//}
 			if (true) {
 				// for audio capturing
-				new MediaAudioEncoder(mMuxer, mMediaEncoderListener);
+				new MediaAudioEncoder(mMuxer, mMediaEncoderListener, true);
 			}
 			mMuxer.prepare();
 			mMuxer.startRecording();
@@ -179,6 +199,13 @@ public class CameraFragment extends Fragment {
 			if (DEBUG) Log.v(TAG, "onStopped:encoder=" + encoder);
 			if (encoder instanceof MediaVideoEncoder)
 				mCameraView.setVideoEncoder(null);
+		}
+
+		@Override
+		public void onPacketAvailable(final ByteBuffer byteBuffer) {
+			byte[] output = new byte[byteBuffer.remaining()];
+			byteBuffer.get(output, 0, output.length);
+			mSockManager.write(output);
 		}
 	};
 }

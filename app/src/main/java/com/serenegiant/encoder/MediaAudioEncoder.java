@@ -46,8 +46,8 @@ public class MediaAudioEncoder extends MediaEncoder {
 
     private AudioThread mAudioThread = null;
 
-	public MediaAudioEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener) {
-		super(muxer, listener);
+	public MediaAudioEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener, boolean packetAvailable) {
+		super(muxer, listener, packetAvailable);
 	}
 
 	@Override

@@ -41,6 +41,7 @@ public abstract class MediaEncoder implements Runnable {
 	public interface MediaEncoderListener {
 		public void onPrepared(MediaEncoder encoder);
 		public void onStopped(MediaEncoder encoder);
+		public void onPacketAvailable(ByteBuffer byteBuffer);
 	}
 
 	protected final Object mSync = new Object();
@@ -81,11 +82,18 @@ public abstract class MediaEncoder implements Runnable {
      */
     private MediaCodec.BufferInfo mBufferInfo;		// API >= 16(Android4.1.2)
 
+	/**
+	 * BufferInfo instance for dequeuing
+	 */
+	private boolean packetAvailable;		// API >= 16(Android4.1.2)
+
     protected final MediaEncoderListener mListener;
 
-    public MediaEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener) {
+    public MediaEncoder(final MediaMuxerWrapper muxer, final MediaEncoderListener listener, boolean packetAvailable) {
     	if (listener == null) throw new NullPointerException("MediaEncoderListener is null");
     	if (muxer == null) throw new NullPointerException("MediaMuxerWrapper is null");
+    	this.packetAvailable = packetAvailable;
+
 		mWeakMuxer = new WeakReference<MediaMuxerWrapper>(muxer);
 		muxer.addEncoder(this);
 		mListener = listener;
@@ -365,6 +373,10 @@ LOOP:	while (mIsCapturing) {
                    	mBufferInfo.presentationTimeUs = getPTSUs();
                    	muxer.writeSampleData(mTrackIndex, encodedData, mBufferInfo);
 					prevOutputPTSUs = mBufferInfo.presentationTimeUs;
+
+					//provide encodedData to listener if enable
+					if(packetAvailable)
+						mListener.onPacketAvailable(encodedData);
                 }
                 // return buffer to encoder
                 mMediaCodec.releaseOutputBuffer(encoderStatus, false);
