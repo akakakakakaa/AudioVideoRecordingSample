@@ -13,10 +13,10 @@ import java.net.UnknownHostException;
  * Created by icns on 2018-07-11.
  */
 
-public class SocketManager implements Runnable {
+public class SocketManager extends Thread {
     public static final String TAG = "SocketManager";
     public static final String SERVER_IP = "163.180.117.216";
-    public static final int SERVER_PORT = 9091;
+    public static final int SERVER_PORT = 9000;
     public static final int MAX_READ_SIZE = 128;
     public enum SocketStatus {
 
@@ -69,17 +69,15 @@ public class SocketManager implements Runnable {
     public void run() {
         int readLen = 0;
         while(isAlive) {
-            synchronized (this) {
-                try {
-                    readLen = sockIn.read(readBuf);
-                    if(readLen < 0) {
-                        Log.d(TAG, "socket read error");
-                        close();
-                        break;
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+            try {
+                readLen = sockIn.read(readBuf);
+                if(readLen < 0) {
+                    Log.d(TAG, "socket read error");
+                    close();
+                    break;
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
 
             switch(readBuf[0]) {

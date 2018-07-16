@@ -41,7 +41,7 @@ import com.serenegiant.encoder.MediaMuxerWrapper;
 import com.serenegiant.encoder.MediaVideoEncoder;
 
 public class CameraFragment extends Fragment {
-	private static final boolean DEBUG = false;	// TODO set false on release
+	private static final boolean DEBUG = true;	// TODO set false on release
 	private static final String TAG = "CameraFragment";
 
 	/**
@@ -134,7 +134,16 @@ public class CameraFragment extends Fragment {
 	 */
 	private void connectToServer() {
 		mSockManager = new SocketManager();
-		mSockManager.run();
+		mSockManager.start();
+	}
+
+	/**
+	 * connectToServer
+	 * for streaming, first request connect to server
+	 */
+	private void closeServer() {
+		mSockManager.close();
+		mSockManager = null;
 	}
 
 	/**
@@ -145,29 +154,37 @@ public class CameraFragment extends Fragment {
 	 */
 	private void startRecording() {
 		if (DEBUG) Log.v(TAG, "startRecording:");
-		try {
-			mRecordButton.setColorFilter(0xffff0000);	// turn red
-			/**
-			* cannot extract audio info from muxer.
-			* muxer does not support outputstream.
-			* so just use audioencoder
-			*/
-			mMuxer = new MediaMuxerWrapper(".m4a");	// if you record audio only, ".m4a" is also OK.
-			//mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
-			//if (true) {
-			//	// for video capturing
-			//	new MediaVideoEncoder(mMuxer, mMediaEncoderListener, mCameraView.getVideoWidth(), mCameraView.getVideoHeight());
-			//}
-			if (true) {
-				// for audio capturing
-				new MediaAudioEncoder(mMuxer, mMediaEncoderListener, true);
+		mRecordButton.setColorFilter(0xffff0000);	// turn red
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					//because of run on main thread error, need to threading
+					connectToServer();
+
+					/**
+					 * cannot extract audio info from muxer.
+					 * muxer does not support outputstream.
+					 * so just use audioencoder
+					 */
+					mMuxer = new MediaMuxerWrapper(".m4a");	// if you record audio only, ".m4a" is also OK.
+					//mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
+					//if (true) {
+					//	// for video capturing
+					//	new MediaVideoEncoder(mMuxer, mMediaEncoderListener, mCameraView.getVideoWidth(), mCameraView.getVideoHeight());
+					//}
+					if (true) {
+						// for audio capturing
+						new MediaAudioEncoder(mMuxer, mMediaEncoderListener, true);
+					}
+					mMuxer.prepare();
+					mMuxer.startRecording();
+				} catch (final IOException e) {
+					mRecordButton.setColorFilter(0);
+					Log.e(TAG, "startCapture:", e);
+				}
 			}
-			mMuxer.prepare();
-			mMuxer.startRecording();
-		} catch (final IOException e) {
-			mRecordButton.setColorFilter(0);
-			Log.e(TAG, "startCapture:", e);
-		}
+		}).start();
 	}
 
 	/**
@@ -181,6 +198,7 @@ public class CameraFragment extends Fragment {
 			mMuxer = null;
 			// you should not wait here
 		}
+		closeServer();
 	}
 
 	/**
@@ -203,9 +221,24 @@ public class CameraFragment extends Fragment {
 
 		@Override
 		public void onPacketAvailable(final ByteBuffer byteBuffer) {
-			byte[] output = new byte[byteBuffer.remaining()];
-			byteBuffer.get(output, 0, output.length);
+			int len = byteBuffer.remaining();
+
+			if(DEBUG) Log.d(TAG, "onPacketAvailable. size is " + len);
+
+			byte[] output = new byte[len];
+			byteBuffer.get(output, 0, len);
 			mSockManager.write(output);
+		}
+
+		byte[] toBytes(int i) {
+			byte[] result = new byte[4];
+
+			result[0] = (byte) (i >> 24);
+			result[1] = (byte) (i >> 16);
+			result[2] = (byte) (i >> 8);
+			result[3] = (byte) (i /*>> 0*/);
+
+			return result;
 		}
 	};
 }

@@ -31,7 +31,7 @@ import android.media.MediaFormat;
 import android.util.Log;
 
 public abstract class MediaEncoder implements Runnable {
-	private static final boolean DEBUG = false;	// TODO set false on release
+	private static final boolean DEBUG = true;	// TODO set false on release
 	private static final String TAG = "MediaEncoder";
 
 	protected static final int TIMEOUT_USEC = 10000;	// 10[msec]
@@ -369,6 +369,7 @@ LOOP:	while (mIsCapturing) {
                     	// muxer is not ready...this will prrograming failure.
                         throw new RuntimeException("drain:muxer hasn't started");
                     }
+
                     // write encoded data to muxer(need to adjust presentationTimeUs.
                    	mBufferInfo.presentationTimeUs = getPTSUs();
                    	muxer.writeSampleData(mTrackIndex, encodedData, mBufferInfo);
